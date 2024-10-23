@@ -2,12 +2,13 @@ import tkinter as tk
 import socket
 import threading
 import time
+import select
 
 start = False
-t1 = None
-t2 = None
+listenThread = None
 s = None
-list = list()
+listConn = list()
+
 eventStop = threading.Event()
 eventStop.clear()
 
@@ -23,35 +24,35 @@ def stopServer():
     s = None
 
 def startServer():
+    global listConn
     global s
     eventStop.clear()
     addr = ("localhost", 8080)
     s = socket.create_server(addr)
-    socketServer = s
-    t1 = threading.Thread(target=acceptConnection, args=[s])
-    t1.start()
-    t2 = threading.Thread(target=listen)
-    t2.start()
+    s.listen()
+    s.setblocking(0)
+    listConn.append(s)
+    listenThread = threading.Thread(target=listen)
+    listenThread.start()
 
-def acceptConnection(s):
-    global list
-    global eventStop
-    while not eventStop.is_set():
-        conn, addr = s.accept()
-        print(addr)
-        list.append(conn)
 
 def listen():
-    global list
+    global s
+    global listConn
     global eventStop
     while not eventStop.is_set():
-        try:
-            for conn in list:
-                data = conn.recv(1024)
+        ready_to_read, ready_to_write, in_error = select.select(listConn,listConn,listConn,0.5)
+        for socket in ready_to_read:
+            if socket == s :
+                conn, addr = socket.accept()
+                print(addr)
+                listConn.append(conn)
+            else:
+                data = socket.recv(1024)
                 print(data.decode('ascii'))
-                conn.send(data)
-        except:
-            pass
+                socket.send(data)
+
+
 
 def ButtonClick():
     global start
