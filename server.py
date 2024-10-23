@@ -7,7 +7,7 @@ import select
 start = False
 listenThread = None
 s = None
-listConn = list()
+listConn = []
 
 eventStop = threading.Event()
 eventStop.clear()
@@ -19,7 +19,7 @@ def stopServer():
     global s
     global eventStop
     eventStop.set()
-    time.sleep(1)
+    time.sleep(2)
     s.close()
     s = None
 
@@ -41,7 +41,7 @@ def listen():
     global listConn
     global eventStop
     while not eventStop.is_set():
-        ready_to_read, ready_to_write, in_error = select.select(listConn,listConn,listConn,0.5)
+        ready_to_read, ready_to_write, in_error = select.select(listConn,listConn,listConn,1.0)
         for socket in ready_to_read:
             if socket == s :
                 conn, addr = socket.accept()
@@ -51,6 +51,7 @@ def listen():
                 data = socket.recv(1024)
                 print(data.decode('ascii'))
                 socket.send(data)
+
 
 
 
