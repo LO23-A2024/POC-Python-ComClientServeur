@@ -57,17 +57,30 @@ class Server:
 
 
     def listen(self):
-        while not self.eventStop.is_set():
-            ready_to_read, ready_to_write, in_error = select.select(self.listConn, self.listConn, self.listConn, 1.0)
-            for socket in ready_to_read:
-                if socket == self.serverSocket :
-                    conn, addr = socket.accept()
-                    print(addr)
-                    self.listConn.append(conn)
-                else:
-                    data = socket.recv(1024)
-                    print(data.decode('ascii'))
-                    socket.send(data)
+        try :
+            while not self.eventStop.is_set():
+                ready_to_read, ready_to_write, in_error = select.select(self.listConn, self.listConn, self.listConn, 1.0)
+                for socket in ready_to_read:
+                    #Nouvelle connexion d'un client
+                    if socket == self.serverSocket :
+                        conn, addr = socket.accept()
+                        print("Connexion : " + str(addr))
+                        self.listConn.append(conn)
+                    #Reception d'un message d'un client
+                    else:
+                        data = socket.recv(1024)
+                        if data:
+                            print(data.decode("utf-8"))
+                            if socket.send("pong".encode("utf-8")) == 0 : #échec à l'envoie socket fermé
+                                socket.close
+                                self.listConn.remove(socket)
+                        else : #Socket fermé côté client
+                            print("Socket client fermé")
+                            self.socket = None
+                        
+        
+        except Exception as ex :
+            print(str(ex))
 
 
 
@@ -77,6 +90,7 @@ def main():
     interface = UI(s.startServer, s.stopServer)
     
     interface.run()
+    s.stopServer()
     
 
 if __name__ == '__main__':
